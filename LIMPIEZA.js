@@ -48,7 +48,7 @@ for (const item of \$input.all()) {
   // 5. Normalización de Empresa a mayúsculas
   let cleanCompany = (raw.Empresa || '').trim().toUpperCase();
 
-  // Clasificación del registro según los errores encontrados
+  // Clasificación del registro
   if (errors.length === 0) {
     validRecords.push({
       json: {
@@ -73,5 +73,4 @@ for (const item of \$input.all()) {
   }
 }
 
-// Retorna un arreglo unificado con etiquetas de estado para el nodo Switch
 return [...validRecords, ...invalidRecords];
