@@ -1,0 +1,308 @@
+{
+  "name": "Data Cleaning ETL - Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { ID: \"1\", Nombre: \"  JUAN PEREZ  \", Email: \"juan.perez@gmail.com\", Telefono: \"04121234567\", Fecha: \"15/10/2023\", Empresa: \"  acme corp \" } },\n  { json: { ID: \"2\", Nombre: \"maria gomez\", Email: \"maria.gomez.com\", Telefono: \"414-9876543\", Fecha: \"2023-11-01\", Empresa: \"tech solutions\" } },\n  { json: { ID: \"3\", Nombre: \"CARLOS LOPEZ\", Email: \"carlos@empresa.com\", Telefono: \"(0424) 555-1234\", Fecha: \"05-06-2024\", Empresa: \"LOGISTICA S.A.\" } },\n  { json: { ID: \"4\", Nombre: \"ana martinez\", Email: \"ana.martinez@gmail.com\", Telefono: \"123\", Fecha: \"febrero 2024\", Empresa: \"\" } },\n  { json: { ID: \"5\", Nombre: \"  \", Email: \"sin_nombre@empresa.com\", Telefono: \"04120001122\", Fecha: \"2024/01/10\", Empresa: \"Sistemas\" } }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        144
+      ],
+      "id": "53af958c-5a10-4f6f-8748-d69827e174d9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const validRecords = [];\nconst invalidRecords = [];\n\n// Expresión regular para validar emails\nconst emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/;\n\nfor (const item of $input.all()) {\n  const raw = item.json;\n  let errors = [];\n\n  // 1. Limpieza de Nombre (Capitalize)\n  let cleanName = (raw.Nombre || '').trim();\n  cleanName = cleanName\n    .toLowerCase()\n    .replace(/(^\\w{1})|(\\s+\\w{1})/g, letter => letter.toUpperCase());\n\n  if (!cleanName) errors.push(\"Nombre ausente\");\n\n  // 2. Validación de Email\n  let cleanEmail = (raw.Email || '').trim().toLowerCase();\n  if (!emailRegex.test(cleanEmail)) {\n    errors.push(\"Email inválido\");\n  }\n\n  // 3. Normalización de Teléfono\n  let cleanPhone = (raw.Telefono || '').replace(/[\\s\\(\\)\\-\\.]/g, '');\n  if (cleanPhone && !cleanPhone.startsWith('+')) {\n    cleanPhone = '+58' + cleanPhone.replace(/^0+/, ''); \n  }\n  if (!cleanPhone || cleanPhone.length < 10) {\n    errors.push(\"Teléfono incompleto o inválido\");\n  }\n\n  // 4. Formateo de Fecha a ISO (YYYY-MM-DD)\n  let cleanDate = '';\n  const rawDate = (raw.Fecha || '').trim();\n  if (rawDate.includes('/')) {\n    const parts = rawDate.split('/');\n    if (parts.length === 3) {\n      cleanDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;\n    }\n  } else if (rawDate.includes('-') && rawDate.length === 10) {\n    cleanDate = rawDate;\n  } else {\n    errors.push(\"Formato de fecha inválido\");\n  }\n\n  // 5. Normalización de Empresa\n  let cleanCompany = (raw.Empresa || '').trim().toUpperCase();\n\n  // Clasificación del registro\n  if (errors.length === 0) {\n    validRecords.push({\n      json: {\n        status: \"VALIDO\",\n        fullName: cleanName,\n        email: cleanEmail,\n        phone: cleanPhone,\n        registerDate: cleanDate,\n        company: cleanCompany,\n        sourceId: raw.ID || ''\n      }\n    });\n  } else {\n    invalidRecords.push({\n      json: {\n        status: \"ERROR\",\n        rawName: raw.Nombre || '',\n        rawEmail: raw.Email || '',\n        reasons: errors.join(', ')\n      }\n    });\n  }\n}\n\n// Retorna todos los registros etiquetados en un solo arreglo\nreturn [...validRecords, ...invalidRecords];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        144
+      ],
+      "id": "b7c2e819-bba8-4a53-b89d-8e5e3bee59c0",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "VALIDO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3d7e4c10-8422-4258-981d-0202b29f2766"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "213f2099-910c-45f7-9179-c28b9f5a5f61",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "ERROR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        144
+      ],
+      "id": "7954c7dc-3079-482a-891f-13005c81b1d9",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3f2cbd5f-cee8-809d-b3cd-000bfafb3dc0",
+          "mode": "list",
+          "cachedResultName": "BASE DE CONTACTOS LIMPIA",
+          "cachedResultUrl": "https://app.notion.com/p/3f2cbd5fcee880208cd1de7c81445b4d"
+        },
+        "title": "BASE DE CONTACTOS LIMPIA",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Nombre Completo|title",
+              "title": "={{ $json.fullName }}"
+            },
+            {
+              "key": "Email|email",
+              "emailValue": "={{ $json.email }}"
+            },
+            {
+              "key": "Teléfono|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "Fecha de Registro|date",
+              "date": "={{ $json.registerDate }}"
+            },
+            {
+              "key": "Empresa|rich_text",
+              "textContent": "={{ $json.company }}"
+            },
+            {
+              "key": "ID Origen|rich_text",
+              "textContent": "={{ $json.sourceId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        816,
+        48
+      ],
+      "id": "526743ae-ba3a-40ad-a907-4ac79a8b9812",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "x8WAGd0LQsZW9YOx",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "594c1a49-d761-4077-a7fa-3c609bc3a37e",
+          "mode": "list",
+          "cachedResultName": "Registros con Errores (QA)",
+          "cachedResultUrl": "https://app.notion.com/p/5101adebfebd428c8b11a644b70bdab0"
+        },
+        "title": "REGISTRO CON ERRORES",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Title|title",
+              "title": "={{ $json.rawName }}"
+            },
+            {
+              "key": "Correo Recibido|rich_text",
+              "textContent": "={{ $json.rawEmail }}"
+            },
+            {
+              "key": "Motivo de Rechazo|rich_text",
+              "textContent": "={{ $json.reasons }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        816,
+        240
+      ],
+      "id": "a9ea0e83-91cc-4faf-89f1-55fe3de49f0d",
+      "name": "Create a database page1",
+      "credentials": {
+        "notionApi": {
+          "id": "x8WAGd0LQsZW9YOx",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Cargador de Archivos CSV para Limpieza de Datos",
+        "formDescription": "Sube tu archivo .csv con la lista de contactos para procesarlo y enviarlo a Notion.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "ARCHIVO CSV",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -352,
+        176
+      ],
+      "id": "e4f7aee8-4abd-44dd-a165-d2abfdf4be0b",
+      "name": "On form submission",
+      "webhookId": "4e6ad0fc-3bb9-4e0d-9552-3a71ceea3a4c"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "ARCHIVO_CSV",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -112,
+        64
+      ],
+      "id": "b70ae6ec-1fca-48f0-b091-24a2bc40d50f",
+      "name": "Extract from File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7f92bc6f-9d64-4ece-b4c3-2499e2fa32fe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d011dee6cb72e8945b64f08a2457c15094eba021ae663cd0cf3c464e2a2643ea"
+  },
+  "nodeGroups": [],
+  "id": "ORVjdQxovQAxusmz",
+  "tags": []
+}
