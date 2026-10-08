@@ -1,33 +1,33 @@
-# 🚀 Pipeline Automatizado de Limpieza de Datos y Control de Calidad (n8n + JavaScript + Notion)
+# 🚀 Pipeline Automatizado de Limpieza de Texto CSV y Control de Calidad (n8n + JS + Notion)
 
-Este proyecto es una solución **ETL (Extracción, Transformación y Carga)** 100% automatizada construida en **n8n**. Está diseñada para procesar cargas de datos mediante archivos CSV, limpiarlos y validarlos en tiempo real utilizando **JavaScript/Regex**, y clasificarlos automáticamente en **Notion**.
+Este proyecto es una solución **ETL (Extracción, Transformación y Carga)** 100% automatizada construida en **n8n**. Permite a los usuarios pegar directamente texto o código CSV en un formulario web, procesarlo y validarlo en tiempo real mediante **JavaScript/Regex**, y clasificar automáticamente los registros en **Notion**.
 
 ---
 
 ## 📌 El Problema
 
-En las operaciones diarias de ventas, soporte o marketing, la recepción manual de listas de prospectos o contactos suele incluir múltiples inconsistencias:
-- Nombres sin formato uniforme (combinación desordenada de mayúsculas y minúsculas).
-- Correos electrónicos con sintaxis o estructura inválida.
-- Números telefónicos locales sin código de país o sin formato internacional (E.164).
-- Fechas registradas en formatos heterogéneos.
+En las operaciones diarias, los equipos suelen copiar y pegar fragmentos de datos desde hojas de cálculo, sistemas legados o listas de correos con múltiples inconsistencias:
+- Nombres desordenados (mayúsculas y minúsculas mixtas).
+- Correos electrónicos con sintaxis errónea.
+- Teléfonos sin código de país o sin formato internacional (E.164).
+- Fechas inconsistentes.
 
-Corregir estos datos manualmente toma horas de trabajo repetitivo y corre el riesgo de ingresar información corrupta o duplicada a la base de datos principal o CRM.
+Procesar estos datos manualmente toma tiempo y contamina las bases de datos o CRM principales.
 
 ---
 
 ## 🛠️ Arquitectura de la Solución
 
 ```text
-[ Formulario Web / Carga CSV ]
-             │
-             ▼
-    [ Extract From File ]
-             │
-             ▼
+[ Formulario Web (Textarea CSV) ]
+               │
+               ▼
+   [ JS CSV Text Parser ] ──► (Conversión de texto plano CSV a Objetos JSON)
+               │
+               ▼
    [ JS Data Cleaning & QA ] ──► (Capitalización, E.164, Regex y Fechas ISO)
-             │
-             ▼
-        [ Switch ]
-         ├── (Registros VÁLIDOS) ──► [ Notion: Base de Contactos Limpia ]
-         └── (Registros ERRORES) ──► [ Notion: Panel de QA / Rechazados ]
+               │
+               ▼
+          [ Switch ]
+           ├── (Registros VÁLIDOS) ──► [ Notion: Base de Contactos Limpia ]
+           └── (Registros ERRORES) ──► [ Notion: Panel de QA / Rechazados ]
